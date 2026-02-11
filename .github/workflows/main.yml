@@ -1,0 +1,55 @@
+name: Build Unsigned iOS IPA
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-cache: true
+
+      - name: Install expo-dev-client
+        run: npx expo install expo-dev-client
+
+      - name: Prebuild iOS
+        run: npx expo prebuild --platform ios
+
+      - name: Build Unsigned App
+        run: |
+          xcodebuild -workspace ios/scratch.xcworkspace \
+            -scheme scratch \
+            -configuration Debug \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_ENTITLEMENTS="" \
+            CODE_SIGNING_METHOD=manual
+
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Debug-iphoneos/scratch.app Payload/
+          zip -r scratch-unsigned.ipa Payload
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scratch-unsigned-ipa
+          path: scratch-unsigned.ipa
