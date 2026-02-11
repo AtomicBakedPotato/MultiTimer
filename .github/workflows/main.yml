@@ -9,6 +9,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: List Xcode versions
+        run: ls /Applications | grep Xcode
+
+      - name: Set Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_16.0.app
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
