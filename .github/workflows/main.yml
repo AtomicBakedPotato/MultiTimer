@@ -15,7 +15,7 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Setup Expo
         uses: expo/expo-github-action@v8
@@ -24,7 +24,7 @@ jobs:
           eas-cache: true
 
       - name: Install expo-dev-client
-        run: npx expo install expo-dev-client
+        run: npx expo install expo-dev-client -- --legacy-peer-deps
 
       - name: Prebuild iOS
         run: npx expo prebuild --platform ios
@@ -53,3 +53,4 @@ jobs:
         with:
           name: scratch-unsigned-ipa
           path: scratch-unsigned.ipa
+
