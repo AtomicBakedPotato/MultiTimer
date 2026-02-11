@@ -33,12 +33,22 @@ jobs:
         run: npx expo install expo-dev-client -- --legacy-peer-deps
 
       - name: Prebuild iOS
-        run: npx expo prebuild --platform ios
+        run: npx expo prebuild --platform ios --no-install
+
+      - name: Install Pods
+        run: cd ios && pod install
+
+      - name: Debug iOS Directory
+        run: ls -R ios
 
       - name: Build Unsigned App
         run: |
-          xcodebuild -workspace ios/scratch.xcworkspace \
-            -scheme scratch \
+          WORKSPACE=$(find ios -name "*.xcworkspace" -maxdepth 1)
+          SCHEME=$(basename "$WORKSPACE" .xcworkspace)
+          echo "Using Workspace: $WORKSPACE"
+          echo "Using Scheme: $SCHEME"
+          xcodebuild -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
             -configuration Debug \
             -sdk iphoneos \
             -derivedDataPath build \
