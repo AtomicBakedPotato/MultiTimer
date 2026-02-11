@@ -13,7 +13,7 @@ jobs:
         run: ls /Applications | grep Xcode
 
       - name: Set Xcode version
-        run: sudo xcode-select -s /Applications/Xcode_16.0.app
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -69,4 +69,5 @@ jobs:
         with:
           name: scratch-unsigned-ipa
           path: scratch-unsigned.ipa
+          
 
