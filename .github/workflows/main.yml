@@ -87,6 +87,16 @@ jobs:
       - name: Install Pods
         run: cd ios && pod install
 
+      - name: Boot Simulator
+        run: |
+          # Booting a simulator is required for actool in Xcode 16 CI
+          SIM_ID=$(xcrun simctl list devices available | grep "iPhone 16" | head -1 | awk -F '[()]' '{print $2}')
+          if [ -z "$SIM_ID" ]; then
+            SIM_ID=$(xcrun simctl list devices available | grep "iPhone" | head -1 | awk -F '[()]' '{print $2}')
+          fi
+          echo "Booting Simulator: $SIM_ID"
+          xcrun simctl boot "$SIM_ID" || true
+
       - name: Build Unsigned App
         run: |
           WORKSPACE=$(find ios -name "*.xcworkspace" -maxdepth 1)
@@ -113,19 +123,22 @@ jobs:
             SDKROOT=iphoneos \
             SUPPORTED_PLATFORMS=iphoneos \
             TARGETED_DEVICE_FAMILY=1 \
-            RUN_CLANG_STATIC_ANALYZER=NO || true
-          
-          if [ -d "build/Build/Products/Release-iphoneos/scratch.app" ]; then
-            echo "Successfully generated .app bundle."
-          else
-            echo "Critical failure: .app bundle not found."
-            exit 65
-          fi
+            RUN_CLANG_STATIC_ANALYZER=NO \
+            ASSETCATALOG_COMPILER_STANDALONE_ICON_COMPILATION=YES \
+            GENERATE_INFOPLIST_FILE=YES
 
       - name: Package IPA
         run: |
           mkdir -p Payload
           APP_PATH=$(find build/Build/Products/Release-iphoneos -name "*.app" -maxdepth 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Critical Error: Could not find .app bundle"
+            exit 1
+          fi
+          if [ ! -f "$APP_PATH/Info.plist" ]; then
+            echo "Critical Error: Info.plist missing in $APP_PATH. Build was incomplete."
+            exit 1
+          fi
           cp -R "$APP_PATH" Payload/
           zip -r scratch-unsigned.ipa Payload
 
