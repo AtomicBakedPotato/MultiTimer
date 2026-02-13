@@ -9,20 +9,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: List Xcode versions
-        run: ls /Applications | grep Xcode
-
-      - name: Set Xcode version
-        run: sudo xcode-select -s /Applications/Xcode_16.1.app
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install dependencies
-        run: npm install --legacy-peer-deps
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -37,8 +23,12 @@ jobs:
       - name: Prebuild iOS
         run: npx expo prebuild --platform ios --no-install
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.1.app
+      - name: Select Xcode and Diagnostic
+        run: |
+          ls /Applications | grep Xcode
+          # Try 16.0 first, then 16.1, then 15.4
+          sudo xcode-select -s /Applications/Xcode_16.0.app || sudo xcode-select -s /Applications/Xcode_16.app || sudo xcode-select -s /Applications/Xcode_16.1.app || sudo xcode-select -s /Applications/Xcode_15.4.app
+          xcodebuild -version
 
       - name: Force Deployment Target and Disable Signing
         run: |
@@ -90,12 +80,13 @@ jobs:
 
       - name: Boot Simulator
         run: |
-          # Booting a simulator is required for actool in Xcode 16 CI
-          SIM_ID=$(xcrun simctl list devices available | grep "iPhone 16" | head -1 | awk -F '[()]' '{print $2}')
-          if [ -z "$SIM_ID" ]; then
-            SIM_ID=$(xcrun simctl list devices available | grep "iPhone" | head -1 | awk -F '[()]' '{print $2}')
-          fi
-          echo "Booting Simulator: $SIM_ID"
+          # Booting a simulator is required for actool in Xcode CI
+          # Find any available iPhone simulator
+          SIM_NAME=$(xcrun simctl list devicetypes | grep "iPhone" | tail -1 | awk '{print $NF}' | tr -d '()')
+          echo "Found simulator type: $SIM_NAME"
+          # Find a specific device of that type
+          SIM_ID=$(xcrun simctl list devices available | grep "iPhone" | head -1 | awk -F '[()]' '{print $2}')
+          echo "Booting Simulator ID: $SIM_ID"
           xcrun simctl boot "$SIM_ID" || true
 
       - name: Build Unsigned App
@@ -103,11 +94,15 @@ jobs:
           WORKSPACE=$(find ios -name "*.xcworkspace" -maxdepth 1)
           SCHEME=$(basename "$WORKSPACE" .xcworkspace)
           mkdir -p build/Build/Products/Release-iphoneos/XCFrameworkIntermediates
+          
+          # Debug: List all available destinations
+          xcodebuild -showdestinations -workspace "$WORKSPACE" -scheme "$SCHEME"
+          
           xcodebuild -workspace "$WORKSPACE" \
             -scheme "$SCHEME" \
             -configuration Release \
             -sdk iphoneos \
-            -destination 'platform=iOS' \
+            -destination 'generic/platform=iOS' \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
