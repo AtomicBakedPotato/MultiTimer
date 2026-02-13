@@ -4,7 +4,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,11 +23,9 @@ jobs:
       - name: Prebuild iOS
         run: npx expo prebuild --platform ios --no-install
 
-      - name: Select Xcode and Diagnostic
+      - name: Select Xcode 16.1
         run: |
-          ls /Applications | grep Xcode
-          # Try 16.0 first, then 16.1, then 15.4
-          sudo xcode-select -s /Applications/Xcode_16.0.app || sudo xcode-select -s /Applications/Xcode_16.app || sudo xcode-select -s /Applications/Xcode_16.1.app || sudo xcode-select -s /Applications/Xcode_15.4.app
+          sudo xcode-select -s /Applications/Xcode_16.1.app
           xcodebuild -version
 
       - name: Force Deployment Target and Disable Signing
